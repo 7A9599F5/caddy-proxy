@@ -46,3 +46,4 @@
 		reverse_proxy {$FRONTEND_HOST}:{$FRONTEND_PORT}
 	}
 }
+# Deployment trigger: 2025-01-25
