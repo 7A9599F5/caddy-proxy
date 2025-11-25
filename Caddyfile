@@ -24,14 +24,25 @@
 	
 	# Route Temporal UI's internal SSO endpoints to frontend (NOT to Authorizer)
 	# These are Temporal UI's own endpoints for initiating/completing SSO
-	@temporal_sso path /auth/sso /auth/sso/*
-	reverse_proxy @temporal_sso {$FRONTEND_HOST}:{$FRONTEND_PORT}
+	# Use handle (not handle_path) to preserve the path for Temporal UI
+	handle /auth/sso* {
+		reverse_proxy {$FRONTEND_HOST}:{$FRONTEND_PORT}
+	}
 
 	# Route all other /auth/* paths to Authorizer backend
-	# This includes /auth/authorize, /auth/oauth/token, /auth/userinfo, etc.
-	@authorizer path /auth /auth/*
-	reverse_proxy @authorizer {$BACKEND_HOST}:{$BACKEND_PORT}
+	# Use handle_path to STRIP the /auth prefix before forwarding
+	# Authorizer expects /authorize, /oauth/token, /userinfo, etc. (NOT /auth/authorize)
+	handle_path /auth/* {
+		reverse_proxy {$BACKEND_HOST}:{$BACKEND_PORT}
+	}
+
+	# Also handle /auth exactly (strip it to /)
+	handle_path /auth {
+		reverse_proxy {$BACKEND_HOST}:{$BACKEND_PORT}
+	}
 
 	# Route everything else to the frontend (Temporal UI)
-	reverse_proxy {$FRONTEND_HOST}:{$FRONTEND_PORT}
+	handle {
+		reverse_proxy {$FRONTEND_HOST}:{$FRONTEND_PORT}
+	}
 }
