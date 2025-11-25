@@ -20,9 +20,18 @@
 		format json # set access log format to json mode
 	}
 
-	# the proxy path is automatically appened to the upstream address
-	reverse_proxy /raw https://utilities.up.railway.app {
-		# add the host header so that Railway knows where to route the request
-		header_up Host {upstream_hostport}
-	}
+	# IMPORTANT: Order matters! More specific paths must come first.
+	
+	# Route Temporal UI's internal SSO endpoints to frontend (NOT to Authorizer)
+	# These are Temporal UI's own endpoints for initiating/completing SSO
+	@temporal_sso path /auth/sso /auth/sso/*
+	reverse_proxy @temporal_sso {$FRONTEND_HOST}:{$FRONTEND_PORT}
+
+	# Route all other /auth/* paths to Authorizer backend
+	# This includes /auth/authorize, /auth/oauth/token, /auth/userinfo, etc.
+	@authorizer path /auth /auth/*
+	reverse_proxy @authorizer {$BACKEND_HOST}:{$BACKEND_PORT}
+
+	# Route everything else to the frontend (Temporal UI)
+	reverse_proxy {$FRONTEND_HOST}:{$FRONTEND_PORT}
 }
